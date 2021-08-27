@@ -1,0 +1,28 @@
+<idea-plugin>
+    <id>fr.o80.CodingProgressBar</id>
+    <name>Gnu Coding Cafe Progress Bar</name>
+    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+
+    <description><![CDATA[
+    Enter short description for your plugin here.<br>
+    <em>most HTML tags may be used</em>
+    ]]></description>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+
+    <application-components>
+        <component>
+            <implementation-class>fr.o80.progress.CodingCafeApplicationComponent</implementation-class>
+        </component>
+    </application-components>
+</idea-plugin>
