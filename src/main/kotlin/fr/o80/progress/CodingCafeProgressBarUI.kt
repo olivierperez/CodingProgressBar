@@ -13,11 +13,13 @@ import java.awt.geom.AffineTransform
 import java.awt.geom.Area
 import java.awt.geom.Rectangle2D
 import java.awt.geom.RoundRectangle2D
-import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.SwingConstants
 import javax.swing.plaf.ComponentUI
 import javax.swing.plaf.basic.BasicProgressBarUI
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 class CodingCafeProgressBarUI : BasicProgressBarUI() {
 
@@ -29,7 +31,6 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
 
     @Volatile
     private var velocity = 1
-
 
     private lateinit var paintLoadedBackground: Paint
 
@@ -61,70 +62,31 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
         })
     }
 
-    override fun paintDeterminate(g2d: Graphics?, c: JComponent?) {
-        val g = g2d as? Graphics2D ?: return
+    override fun paintDeterminate(g: Graphics?, c: JComponent?) {
+        val g2d = g as? Graphics2D ?: return
         c ?: return
 
         if (progressBar.orientation != SwingConstants.HORIZONTAL || !c.componentOrientation.isLeftToRight) {
             super.paintDeterminate(g, c)
             return
         }
-        val config = GraphicsUtil.setupAAPainting(g)
-        val b = progressBar.insets // area for border
 
-        val w = progressBar.width
-        var h = progressBar.preferredSize.height
-        if (!isEven(c.height - h)) h++
+        g2d.drawProgressBar(c) { insets, w, h, barRectWidth, barRectHeight ->
+            val amountFull = getAmountFull(insets, barRectWidth, barRectHeight)
 
-        val barRectWidth = w - (b.right + b.left)
-        val barRectHeight = h - (b.top + b.bottom)
 
-        if (barRectWidth <= 0 || barRectHeight <= 0) {
-            return
-        }
-
-        val amountFull = getAmountFull(b, barRectWidth, barRectHeight)
-
-        val parent = c.parent
-        val background = if (parent != null) parent.background else UIUtil.getPanelBackground()
-
-        g.color = background
-        if (c.isOpaque) {
-            g.fillRect(0, 0, w, h)
-        }
-
-        val r = JBUIScale.scale(8f)
-        val r2 = JBUIScale.scale(9f)
-        val off = JBUIScale.scale(1f)
-
-        g.translate(0, (c.height - h) / 2)
-        g.color = progressBar.foreground
-        g.fill(RoundRectangle2D.Float(0f, 0f, w - off, h - off, r2, r2))
-        g.color = background
-        g.fill(RoundRectangle2D.Float(off, off, w - 2f * off - off, h - 2f * off - off, r, r))
-        g.paint = paintLoadedBackground
-        CafeIcons.HUSKY_LEFT.paintIcon(progressBar, g, amountFull - JBUI.scale(10), -JBUI.scale(6))
-        g.fill(
-            RoundRectangle2D.Float(
-                2f * off,
-                2f * off,
-                amountFull - JBUIScale.scale(5f),
-                h - JBUIScale.scale(5f),
-                JBUIScale.scale(7f),
-                JBUIScale.scale(7f)
-            )
-        )
-        g.translate(0, -(c.height - h) / 2)
-
-        // Deal with possible text painting
-        if (progressBar.isStringPainted) {
-            paintString(
-                g, b.left, b.top,
-                barRectWidth, barRectHeight,
-                amountFull, b
+            g2d.drawBorder(component = c, width = w, height = h)
+            g2d.drawProgression(width = amountFull, height = h)
+            g2d.drawLoadingImage(loadingImage = CafeIcons.HUSKY_RIGHT, offset = amountFull)
+            g2d.drawText(
+                component = c,
+                insets = insets,
+                offsetX = amountFull,
+                height = h,
+                barRectWidth = barRectHeight,
+                barRectHeight = barRectHeight
             )
         }
-        config.restore()
     }
 
     override fun paintIndeterminate(g2d: Graphics?, c: JComponent?) {
@@ -192,12 +154,18 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
             g.fill(area)
         }
 
-        val scaledIcon: Icon =
-            if (velocity > 0) CafeIcons.HUSKY_LEFT
-            else CafeIcons.HUSKY_RIGHt
-        scaledIcon.paintIcon(progressBar, g, offset2 - JBUI.scale(10), -JBUI.scale(6))
-
         g.draw(RoundRectangle2D.Float(1f, 1f, w - 2f - 1f, h - 2f - 1f, r, r))
+
+        val loadingImage: Image =
+            if (velocity > 0) CafeIcons.HUSKY_LEFT
+            else CafeIcons.HUSKY_RIGHT
+
+        g.drawImage(
+            loadingImage,
+            affineTransform(offset2, 10, 0, 1, 1),
+            null
+        )
+
         g.translate(0, -(c.height - h) / 2)
 
         // Deal with possible text painting
@@ -262,10 +230,122 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
 
     private fun isEven(value: Int): Boolean = value % 2 == 0
 
+    private fun affineTransform(offsetX: Int, tx: Int, ty: Int, sx: Int, sy: Int): AffineTransform =
+        AffineTransform().apply {
+            setToScale(
+                JBUIScale.scale(sx).toDouble(),
+                JBUIScale.scale(sy).toDouble()
+            )
+            setToTranslation(
+                offsetX.toDouble() + JBUIScale.scale(tx).toDouble(),
+                JBUIScale.scale(ty).toDouble()
+            )
+        }
+
+    private fun Graphics2D.drawBorder(component: JComponent, height: Int, width: Int) {
+        val outsideRadius = JBUIScale.scale(9f)
+        val insideRadius = JBUIScale.scale(8f)
+
+        val parent = component.parent
+        val background = if (parent != null) parent.background else UIUtil.getPanelBackground()
+
+        translate(0, (component.height - height) / 2)
+        color = progressBar.foreground
+        fill(RoundRectangle2D.Float(0f, 0f, width - MARGIN, height - MARGIN, outsideRadius, outsideRadius))
+
+        color = background
+        fill(
+            RoundRectangle2D.Float(
+                MARGIN,
+                MARGIN,
+                width - 2f * MARGIN - MARGIN,
+                height - 2f * MARGIN - MARGIN,
+                insideRadius,
+                insideRadius
+            )
+        )
+    }
+
+    private fun Graphics2D.drawLoadingImage(loadingImage: Image, offset: Int) {
+        println("offset = $offset")
+        drawImage(
+            loadingImage,
+            affineTransform(
+                offsetX = offset,
+                tx = -10,
+                ty = -2,
+                sx = 1,
+                sy = 1
+            ),
+            null
+        )
+    }
+
+    private fun Graphics2D.drawProgression(width: Int, height: Int) {
+        paint = paintLoadedBackground
+        fill(
+            RoundRectangle2D.Float(
+                2f * MARGIN,
+                2f * MARGIN,
+                width - JBUIScale.scale(5f),
+                height - JBUIScale.scale(5f),
+                JBUIScale.scale(7f),
+                JBUIScale.scale(7f)
+            )
+        )
+    }
+
+    private fun Graphics2D.drawText(
+        component: JComponent,
+        insets: Insets,
+        offsetX: Int,
+        height: Int,
+        barRectWidth: Int,
+        barRectHeight: Int
+    ) {
+        // Deal with possible text painting
+        if (progressBar.isStringPainted) {
+            translate(0, -(component.height - height) / 2)
+
+            paintString(
+                this, insets.left, insets.top,
+                barRectWidth, barRectHeight,
+                offsetX, insets
+            )
+        }
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    private inline fun Graphics2D.drawProgressBar(
+        component: JComponent,
+        block: (Insets, w: Int, wh: Int, barRectWidth: Int, barRectHeight: Int) -> Unit
+    ) {
+        contract {
+            callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+        }
+        val config = GraphicsUtil.setupAAPainting(this)
+
+        val b = progressBar.insets
+        val w = progressBar.width
+        var h = progressBar.preferredSize.height
+        if (!isEven(component.height - h)) h++
+
+        val barRectWidth = w - (b.right + b.left)
+        val barRectHeight = h - (b.top + b.bottom)
+
+        if (barRectWidth <= 0 || barRectHeight <= 0) {
+            return
+        }
+
+        block(b, w, h, barRectWidth, barRectHeight)
+        config.restore()
+    }
+
     companion object {
 
         private const val ONE_OVER_SEVEN = 1f / 7
         private val VIOLET = Color(90, 0, 157)
+        private val MARGIN = JBUIScale.scale(1f)
 
         @JvmStatic
         @Suppress("ACCIDENTAL_OVERRIDE", "UNUSED")
@@ -275,3 +355,5 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
         }
     }
 }
+
+
