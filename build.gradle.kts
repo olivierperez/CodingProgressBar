@@ -27,7 +27,7 @@ tasks {
             Add change notes here.<br>
             <em>most HTML tags may be used</em>        """.trimIndent())
         sinceBuild.set("192")
-        untilBuild.set("213.*")
+        untilBuild.set("999.*")
     }
 }
 tasks.getByName<Test>("test") {
