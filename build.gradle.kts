@@ -1,35 +1,50 @@
 plugins {
-    id("org.jetbrains.intellij") version "1.0"
-    kotlin("jvm") version "1.4.31"
-    java
+    id("java")
+    id("org.jetbrains.kotlin.jvm") version "1.8.21"
+    id("org.jetbrains.intellij") version "1.13.3"
+    kotlin("plugin.serialization") version "1.8.21"
 }
 
 group = "fr.o80"
-version = "1.0-SNAPSHOT"
+version = "1.1"
 
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation(kotlin("stdlib"))
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+intellij {
+    version.set("2022.2.5")
+    type.set("IC")
+
+    plugins.set(listOf(/* Plugin Dependencies */))
 }
 
-// See https://github.com/JetBrains/gradle-intellij-plugin/
-intellij {
-    version.set("2021.2")
-}
 tasks {
+    withType<JavaCompile> {
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
+    }
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions.jvmTarget = "17"
+    }
+
     patchPluginXml {
-        changeNotes.set("""
-            Add change notes here.<br>
-            <em>most HTML tags may be used</em>        """.trimIndent())
         sinceBuild.set("192")
         untilBuild.set("999.*")
     }
+
+    signPlugin {
+        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
+        privateKey.set(System.getenv("PRIVATE_KEY"))
+        password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
+    }
+
+    publishPlugin {
+        token.set(System.getenv("PUBLISH_TOKEN"))
+    }
 }
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
+
+dependencies {
+    implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
 }

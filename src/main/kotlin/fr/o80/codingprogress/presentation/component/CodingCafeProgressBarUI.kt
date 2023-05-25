@@ -1,50 +1,66 @@
-package fr.o80.progress
+package fr.o80.codingprogress.presentation.component
 
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.ui.JBColor
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.GraphicsUtil
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import sun.swing.SwingUtilities2
-import java.awt.*
+import fr.o80.codingprogress.data.ProgressConfig
+import fr.o80.codingprogress.domain.GetConfigByProjectUseCase
+import fr.o80.codingprogress.domain.ImageService
+import fr.o80.codingprogress.presentation.affineTransform
+import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.Insets
+import java.awt.LinearGradientPaint
+import java.awt.Paint
 import java.awt.event.ComponentAdapter
 import java.awt.geom.AffineTransform
 import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import javax.swing.SwingConstants
-import javax.swing.plaf.ComponentUI
 import javax.swing.plaf.basic.BasicProgressBarUI
+import kotlin.math.max
+import kotlin.math.min
 
-class CodingCafeProgressBarUI : BasicProgressBarUI() {
+open class CodingCafeProgressBarUI : BasicProgressBarUI() {
 
     @Volatile
-    private var offset2 = 0
+    private var indeterminateOffset = 0
 
     @Volatile
     private var velocity = 1
 
+    private var config: ProgressConfig? = null
     private lateinit var paintLoadedBackground: Paint
+    private var image: BufferedImage? = null
+    private var reversedImage: BufferedImage? = null
+
+    private val getConfigByProject = service<GetConfigByProjectUseCase>()
+    private val imageService = service<ImageService>()
 
     override fun getPreferredSize(c: JComponent?): Dimension {
+        config = getConfig()
+
+        val config = config ?: return super.getPreferredSize(c)
+        val colors = config.splitColors()
+        val images = imageService.loadImages(config)
+        image = images?.first
+        reversedImage = images?.second
+
         paintLoadedBackground = LinearGradientPaint(
             0f,
             JBUIScale.scale(2f),
             0f,
             progressBar.height - JBUIScale.scale(6f),
-            floatArrayOf(
-                ONE_OVER_SEVEN * 1,
-                ONE_OVER_SEVEN * 2,
-                ONE_OVER_SEVEN * 3,
-                ONE_OVER_SEVEN * 4,
-                ONE_OVER_SEVEN * 5,
-                ONE_OVER_SEVEN * 6,
-                ONE_OVER_SEVEN * 7
-            ),
-            arrayOf(
-                Color.RED, Color.ORANGE, Color.YELLOW, Color.GREEN, Color.cyan, Color.blue, Color(90, 0, 157)
-            )
+            colors.indices.map { it.toFloat() / (colors.size - 1) }.toFloatArray(),
+            colors.toTypedArray()
         )
-        return Dimension(super.getPreferredSize(c).width, JBUIScale.scale(20))
+        val imageHeight = image?.height ?: 20
+        return Dimension(super.getPreferredSize(c).width, JBUIScale.scale((imageHeight + SCALED_MARGIN * 4).toInt()))
     }
 
     override fun installListeners() {
@@ -54,16 +70,20 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
     }
 
     override fun paintDeterminate(g: Graphics?, c: JComponent?) {
+        config ?: return super.paintDeterminate(g, c)
         val g2d = g as? Graphics2D ?: return
         c ?: return
 
         g2d.drawProgressBar(c) { insets, w, h, barRectWidth, barRectHeight ->
             val amountFull = getAmountFull(insets, barRectWidth, barRectHeight)
 
-
             g2d.drawBorder(component = c, width = w, height = h)
             g2d.drawProgression(width = amountFull, height = h)
-            g2d.drawLoadingImage(loadingImage = CafeIcons.HUSKY_RIGHT, offset = amountFull)
+            g2d.drawLoadingImage(
+                component = c,
+                image = image,
+                offset = amountFull.toFloat()
+            )
             g2d.drawDeterminedText(
                 component = c,
                 insets = insets,
@@ -76,6 +96,7 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
     }
 
     override fun paintIndeterminate(g: Graphics?, c: JComponent?) {
+        config ?: return super.paintIndeterminate(g, c)
         val g2d = g as? Graphics2D ?: return
         c ?: return
 
@@ -84,21 +105,22 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
             g2d.drawProgression(width = w, height = h)
 
             val loadingImage: BufferedImage =
-                (if (velocity > 0) CafeIcons.HUSKY_RIGHT else CafeIcons.HUSKY_LEFT) as? BufferedImage
+                (if (velocity > 0) image else reversedImage)
                     ?: return
 
-            offset2 += velocity
-            if (offset2 <= loadingImage.width / 2) {
-                offset2 = loadingImage.width / 2
+            indeterminateOffset += velocity
+            if (indeterminateOffset <= loadingImage.width / 2) {
+                indeterminateOffset = loadingImage.width / 2
                 velocity = 1
-            } else if (offset2 >= w - loadingImage.width / 2) {
-                offset2 = w - loadingImage.width / 2
+            } else if (indeterminateOffset >= w - loadingImage.width / 2) {
+                indeterminateOffset = w - loadingImage.width / 2
                 velocity = -1
             }
 
             g2d.drawLoadingImage(
-                loadingImage = loadingImage,
-                offset = offset2
+                component = c,
+                image = loadingImage,
+                offset = indeterminateOffset.toFloat()
             )
             g2d.drawUndeterminedText(
                 component = c,
@@ -112,6 +134,11 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
 
     override fun getBoxLength(availableLength: Int, otherDimension: Int): Int = availableLength
 
+    private fun getConfig(): ProgressConfig? {
+        val project = ProjectManager.getInstance().openProjects.firstOrNull()
+        return getConfigByProject(project)
+    }
+
     private fun isEven(value: Int): Boolean = value % 2 == 0
 
     private fun Graphics2D.drawBorder(component: JComponent, height: Int, width: Int) {
@@ -123,30 +150,47 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
 
         translate(0, (component.height - height) / 2)
         color = progressBar.foreground
-        fill(RoundRectangle2D.Float(0f, 0f, width - MARGIN, height - MARGIN, outsideRadius, outsideRadius))
+        fill(
+            RoundRectangle2D.Float(
+                0f,
+                0f,
+                width - SCALED_MARGIN,
+                height - SCALED_MARGIN,
+                outsideRadius,
+                outsideRadius
+            )
+        )
 
         color = background
         fill(
             RoundRectangle2D.Float(
-                MARGIN,
-                MARGIN,
-                width - 2f * MARGIN - MARGIN,
-                height - 2f * MARGIN - MARGIN,
+                SCALED_MARGIN,
+                SCALED_MARGIN,
+                width - 2f * SCALED_MARGIN - SCALED_MARGIN,
+                height - 2f * SCALED_MARGIN - SCALED_MARGIN,
                 insideRadius,
                 insideRadius
             )
         )
     }
 
-    private fun Graphics2D.drawLoadingImage(loadingImage: Image, offset: Int) {
+    private fun Graphics2D.drawLoadingImage(component: JComponent, image: BufferedImage?, offset: Float) {
+        image ?: return
+
+        val verticalMargin = (component.height - image.height) / 2f
+        val horizontalMargin = SCALED_MARGIN * 2 + SCALED_PROGRESSION_RADIUS / 2
+        val maxedOffset = min(
+            max(horizontalMargin, offset - image.width / 2f),
+            component.width - image.width - horizontalMargin
+        )
+
         drawImage(
-            loadingImage,
+            image,
             affineTransform(
-                offsetX = offset,
-                tx = -10,
-                ty = -2,
-                sx = 1,
-                sy = 1
+                tx = maxedOffset,
+                ty = verticalMargin,
+                sx = 1f,
+                sy = 1f
             ),
             null
         )
@@ -156,12 +200,12 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
         paint = paintLoadedBackground
         fill(
             RoundRectangle2D.Float(
-                2f * MARGIN,
-                2f * MARGIN,
+                2f * SCALED_MARGIN,
+                2f * SCALED_MARGIN,
                 width - JBUIScale.scale(5f),
                 height - JBUIScale.scale(5f),
-                PROGRESSION_RADIUS,
-                PROGRESSION_RADIUS
+                SCALED_PROGRESSION_RADIUS,
+                SCALED_PROGRESSION_RADIUS
             )
         )
     }
@@ -214,17 +258,12 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
         when (progressBar.orientation) {
             SwingConstants.HORIZONTAL -> {
                 color = selectionBackground
-                SwingUtilities2.drawString(
-                    progressBar, this, progressString,
-                    renderLocation.x, renderLocation.y
-                )
+                drawString(progressString, renderLocation.x, renderLocation.y)
                 color = selectionForeground
                 clipRect(fillStart, y, amountFull, h)
-                SwingUtilities2.drawString(
-                    progressBar, this, progressString,
-                    renderLocation.x, renderLocation.y
-                )
+                drawString(progressString, renderLocation.x, renderLocation.y)
             }
+
             SwingConstants.VERTICAL -> {
                 color = selectionBackground
                 val rotate = AffineTransform.getRotateInstance(Math.PI / 2)
@@ -233,16 +272,10 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
                     this, progressString,
                     x, y, w, h
                 )
-                SwingUtilities2.drawString(
-                    progressBar, this, progressString,
-                    renderLocation.x, renderLocation.y
-                )
+                drawString(progressString, renderLocation.x, renderLocation.y)
                 color = selectionForeground
                 clipRect(x, fillStart, w, amountFull)
-                SwingUtilities2.drawString(
-                    progressBar, this, progressString,
-                    renderLocation.x, renderLocation.y
-                )
+                drawString(progressString, renderLocation.x, renderLocation.y)
             }
         }
         clip = oldClip
@@ -275,31 +308,18 @@ class CodingCafeProgressBarUI : BasicProgressBarUI() {
         config.restore()
     }
 
-    private fun affineTransform(offsetX: Int, tx: Int, ty: Int, sx: Int, sy: Int): AffineTransform =
-        AffineTransform().apply {
-            setToScale(
-                JBUIScale.scale(sx).toDouble(),
-                JBUIScale.scale(sy).toDouble()
-            )
-            setToTranslation(
-                offsetX.toDouble() + JBUIScale.scale(tx).toDouble(),
-                JBUIScale.scale(ty).toDouble()
-            )
-        }
-
     companion object {
-
-        private const val ONE_OVER_SEVEN = 1f / 7
-        private val MARGIN = JBUIScale.scale(1f)
-        private val PROGRESSION_RADIUS = JBUIScale.scale(7f)
-
-        @JvmStatic
-        @Suppress("ACCIDENTAL_OVERRIDE", "UNUSED")
-        fun createUI(c: JComponent): ComponentUI {
-            c.border = JBUI.Borders.empty().asUIResource()
-            return CodingCafeProgressBarUI()
-        }
+        private const val MARGIN = 1f
+        private val SCALED_MARGIN = JBUIScale.scale(MARGIN)
+        private val SCALED_PROGRESSION_RADIUS = JBUIScale.scale(7f)
     }
 }
 
+private fun ProgressConfig.splitColors(): List<JBColor> {
+    return colors?.split(',')?.map { it.toJBColor() } ?: listOf(JBColor.GRAY)
+}
 
+private fun String.toJBColor(): JBColor {
+    val colorInt = this.substring(1).toInt(16)
+    return JBColor(colorInt, colorInt)
+}

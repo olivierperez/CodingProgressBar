@@ -1,28 +1,42 @@
 <idea-plugin>
     <id>fr.o80.CodingProgressBar</id>
+
     <name>Gnu Coding Cafe Progress Bar</name>
-    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+    <vendor email="support@olivierperez.fr" url="https://github.com/olivierperez">Olivier PEREZ</vendor>
 
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
-    ]]></description>
+    Customize the progress bar to enjoy loadings.<br/>
+    <a href="https://github.com/olivierperez/CodingProgressBar/">Source code on Github</a>
+  ]]></description>
 
-    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
-         on how to target different products -->
+    <change-notes><![CDATA[
+        1.1 Customize the progress bar by projects or folders<br/>
+        1.0 Replace the progress bars by a cappuccino<br/>
+  ]]></change-notes>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
 
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Add your extensions here -->
+        <applicationService serviceInterface="fr.o80.codingprogress.data.ConfigService"
+                            serviceImplementation="fr.o80.codingprogress.data.ConfigServiceImpl"/>
+        <projectConfigurable id="fr.o80.codingprogress.presentation.ProgressConfigurable"
+                             instance="fr.o80.codingprogress.presentation.ProgressConfigurable"
+                             displayName="Coding Progress Bar"
+                             parentId="tools"
+                             nonDefaultProject="true"/>
     </extensions>
 
-    <actions>
-        <!-- Add your actions here -->
-    </actions>
-
-    <application-components>
-        <component>
-            <implementation-class>fr.o80.progress.CodingCafeApplicationComponent</implementation-class>
-        </component>
-    </application-components>
+    <applicationListeners>
+        <listener class="fr.o80.codingprogress.listener.CodingCafeLafListener"
+                  topic="com.intellij.ide.ui.LafManagerListener"/>
+        <listener class="fr.o80.codingprogress.listener.CodingCafeAppLifecycleListener"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
+    </applicationListeners>
 </idea-plugin>

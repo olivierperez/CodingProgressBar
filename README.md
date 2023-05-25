@@ -1,5 +1,5 @@
 # CodingProgressBar
 
-**Still under heavy development!**
+Why do we have to watch to an empty progress bar while it's building?
 
-Progress Bar plugin for IntelliJ branded for my [Twitch channel](https://twitch.tv/gnu_coding_cafe).
+Let's configure it to display a funny image, and the right colors based on the project you're building. 
