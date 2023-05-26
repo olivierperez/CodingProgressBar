@@ -37,7 +37,5 @@
     <applicationListeners>
         <listener class="fr.o80.codingprogress.listener.CodingCafeLafListener"
                   topic="com.intellij.ide.ui.LafManagerListener"/>
-        <listener class="fr.o80.codingprogress.listener.CodingCafeAppLifecycleListener"
-                  topic="com.intellij.ide.AppLifecycleListener"/>
     </applicationListeners>
 </idea-plugin>

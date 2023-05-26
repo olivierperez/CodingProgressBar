@@ -8,7 +8,7 @@ import com.intellij.openapi.components.Storage
 @State(name = "ProgressConfigs", storages = [Storage("ProgressConfigs.xml", roamingType = RoamingType.DISABLED)])
 class ConfigServiceImpl : PersistentStateComponent<ProgressConfigs>, ConfigService {
 
-    private var state: ProgressConfigs = ProgressConfigs(null)
+    private var state: ProgressConfigs = defaultConfig()
 
     override fun getState(): ProgressConfigs {
         return state
