@@ -13,9 +13,19 @@ class GetConfigByProjectUseCase {
 
     operator fun invoke(project: Project?): ProgressConfig? {
         val projectPath = project?.basePath ?: ""
-        return configService.read().paths
+        val foundConfig = configService.read().paths
             ?.sortedByDescending { it.path?.length ?: -1 }
             ?.firstOrNull { config -> projectPath.startsWith(config.path ?: "") || config.path == "*" }
+        return foundConfig?.let(::postFix)
+    }
+
+    private fun postFix(config: ProgressConfig): ProgressConfig {
+        val colors = config.colors
+        return when {
+            colors.isNullOrBlank() -> config.copy(colors = "#A0A0A0,#202020")
+            colors.contains(',') -> config
+            else -> config.copy(colors = "$colors,$colors")
+        }
     }
 
 }
