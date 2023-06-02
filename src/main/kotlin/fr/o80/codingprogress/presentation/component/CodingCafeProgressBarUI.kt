@@ -60,7 +60,7 @@ open class CodingCafeProgressBarUI : BasicProgressBarUI() {
             colors.toTypedArray()
         )
         val imageHeight = image?.height ?: 20
-        return Dimension(super.getPreferredSize(c).width, JBUIScale.scale((imageHeight + SCALED_MARGIN * 4).toInt()))
+        return Dimension(super.getPreferredSize(c).width, (imageHeight + MARGIN * 4).toInt())
     }
 
     override fun installListeners() {
