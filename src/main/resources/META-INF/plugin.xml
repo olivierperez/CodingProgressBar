@@ -15,6 +15,7 @@
 
     <change-notes><![CDATA[
         1.7 - Fix image loading<br/>
+            - Fix overriding of progressbar on new IntelliJ versions<br/>
         1.6 - Support new IntelliJ version<br/>
         1.5 - Support new IntelliJ version<br/>
         1.4 - Remove useless scale<br/>
@@ -32,6 +33,7 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="fr.o80.codingprogress.CodingStartupActivity"/>
         <applicationService serviceInterface="fr.o80.codingprogress.data.ConfigService"
                             serviceImplementation="fr.o80.codingprogress.data.ConfigServiceImpl"/>
         <projectConfigurable id="fr.o80.codingprogress.presentation.ProgressConfigurable"
@@ -40,9 +42,4 @@
                              parentId="tools"
                              nonDefaultProject="true"/>
     </extensions>
-
-    <applicationListeners>
-        <listener class="fr.o80.codingprogress.listener.CodingCafeLafListener"
-                  topic="com.intellij.ide.ui.LafManagerListener"/>
-    </applicationListeners>
 </idea-plugin>

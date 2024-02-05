@@ -13,7 +13,7 @@ repositories {
 }
 
 intellij {
-    version.set("2022.2.5")
+    version.set("2023.3.3")
     type.set("IC")
 
     plugins.set(listOf(/* Plugin Dependencies */))
