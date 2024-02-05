@@ -14,6 +14,7 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        1.7 - Fix image loading<br/>
         1.6 - Support new IntelliJ version<br/>
         1.5 - Support new IntelliJ version<br/>
         1.4 - Remove useless scale<br/>
