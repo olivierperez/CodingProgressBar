@@ -4,8 +4,8 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.dsl.builder.Align
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.ui.table.TableView
 import fr.o80.codingprogress.data.ProgressConfig
 import fr.o80.codingprogress.data.ProgressConfigs
@@ -41,7 +41,7 @@ class ProgressConfigurable(
                         tableModel.fireTableDataChanged()
                     }
                     .createPanel()
-            ).horizontalAlign(HorizontalAlign.FILL)
+            ).align(Align.FILL)
         }
     }
 
