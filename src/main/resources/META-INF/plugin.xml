@@ -34,7 +34,6 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="fr.o80.codingprogress.CodingStartupActivity"/>
         <applicationService serviceInterface="fr.o80.codingprogress.data.ConfigService"
                             serviceImplementation="fr.o80.codingprogress.data.ConfigServiceImpl"/>
         <projectConfigurable id="fr.o80.codingprogress.presentation.ProgressConfigurable"
@@ -43,4 +42,11 @@
                              parentId="tools"
                              nonDefaultProject="true"/>
     </extensions>
+
+    <applicationListeners>
+        <listener class="fr.o80.codingprogress.listener.CodingCafeLafListener"
+                  topic="com.intellij.ide.ui.LafManagerListener"/>
+        <listener class="fr.o80.codingprogress.listener.CodingCafeLafListener"
+                  topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+    </applicationListeners>
 </idea-plugin>
