@@ -11,17 +11,34 @@ import javax.imageio.ImageIO
 
 @Service
 class ImageService {
-    fun loadImages(config: ProgressConfig): Pair<BufferedImage, BufferedImage>? {
+    fun loadImages(
+        config: ProgressConfig,
+        maxHeight: Int
+    ): Pair<BufferedImage, BufferedImage>? {
         if (config.imagePath == "husky") {
             return Pair(CafeIcons.HUSKY_RIGHT, CafeIcons.HUSKY_LEFT)
         }
 
-        val normalImage = loadImage(config.imagePath)
+        val normalImage = loadImage(config.imagePath)?.resized(maxHeight)
         return if (normalImage != null) {
             val flippedImage = normalImage.horizontallyFlipped()
             Pair(normalImage, flippedImage)
         } else {
             null
+        }
+    }
+}
+
+private fun BufferedImage.resized(maxHeight: Int): BufferedImage {
+    if (this.height < maxHeight) {
+        return this
+    }
+    val maxWidth = this.width * maxHeight / height
+
+    return BufferedImage(maxWidth, maxHeight, type).apply {
+        createGraphics().let { g2d ->
+            g2d.drawImage(this, 0, 0, maxWidth, maxHeight, null)
+            g2d.dispose()
         }
     }
 }

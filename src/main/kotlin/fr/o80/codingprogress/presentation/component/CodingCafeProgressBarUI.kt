@@ -47,7 +47,7 @@ open class CodingCafeProgressBarUI : BasicProgressBarUI() {
 
         val config = config ?: return super.getPreferredSize(c)
         val colors = config.splitColors()
-        val images = imageService.loadImages(config)
+        val images = imageService.loadImages(config, maxHeight = 20)
         image = images?.first
         reversedImage = images?.second
 
