@@ -13,7 +13,7 @@ repositories {
 }
 
 intellij {
-    version.set("2023.3.3")
+    version.set("2024.1")
     type.set("IC")
 
     plugins.set(listOf(/* Plugin Dependencies */))
@@ -30,7 +30,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("231")
-        untilBuild.set("233.*")
+        untilBuild.set("241.*")
     }
 
     signPlugin {
