@@ -14,6 +14,7 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        1.9 - Maximize height of loading image<br/>
         1.8 - Fix deprecated call<br/>
             - Stop supporting 2022 versions<br/>
         1.7 - Fix image loading<br/>
